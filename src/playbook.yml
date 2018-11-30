@@ -1,0 +1,36 @@
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      vars:
+        gcp_zone: us-central1-c
+        gcp_region: us-central1
+        gcp_project: sdb-gitlab
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: ../credentials.json
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20181030
+        disk_size: 12
+        disks:
+          - disk-gitlab-01
+          - disk-gitlab-02
+          - disk-gitlab-03
+          - disk-gitlab-04
+          - disk-gitlab-05
+        addresses:
+          - addr-gitlab-01
+          - addr-gitlab-02
+          - addr-gitlab-03
+          - addr-gitlab-04
+          - addr-gitlab-05
+        instances:
+          - { index: 1, tag: postgre, gcp_machine_type: f1-micro}
+          - { index: 2, tag: redis_master, gcp_machine_type: f1-micro}
+          - { index: 3, tag: redis_slave, gcp_machine_type: f1-micro}
+          - { index: 4, tag: nfs, gcp_machine_type: f1-micro}
+          - { index: 5, tag: gitlab, gcp_machine_type: f1-micro}
+
+- hosts: all
+  become: yes
+  roles:
+    - { role: users, payload: users.yml }
