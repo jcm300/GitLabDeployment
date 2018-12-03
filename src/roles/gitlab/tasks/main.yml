@@ -1,0 +1,46 @@
+- name: postfix install pre-config
+  shell: "echo \"{{item}}\" | debconf-set-selections"
+  loop:
+    - "postfix postfix/main_mailer_type select internetsite"
+    - "postfix postfix/mailname string $hostname.localdomain"
+
+- name: install dependencies packages
+  apt:
+    name: '{{item}}'
+  loop:
+    - curl
+    - openssh-server
+    - ca-certificates
+    - postfix
+    - nfs-common
+    - postgresql-client
+
+- name: create NFS dir
+  file: 
+    path: /nfs/home
+    state: directory
+
+- name: config NFS
+  shell: "echo {{item}} >> /etc/fstab"
+  loop:
+    - "{{nfsAddress}}:/home       /nfs/home      nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+
+- name: pre-install for gitlab
+  shell: 
+    cmd: "curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash"
+    chdir: /tmp
+
+- name: install gitlab
+  apt:
+    name: gitlab-ce
+
+- name: gitlab configs
+  copy:
+    content: "external_url = 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = 'nfs/home/var/opt/gitlab/git-data'\nroles ['application_role']\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'UTF-8'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\nredis['master_name'] = 'gitlab-redis'\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress}}', 'port' => 26379}\n]\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002\ngit_data_dirs({'default' => {'path' => '/nfs/home/var/opt/gitlab-data/git-data'} })\nuser['home'] = '/nfs/home/var/opt/gitlab-data/home'\ngitlab_rails['uploads_directory'] = '/nfs/home/var/opt/gitlab-data/uploads'\ngitlab_rails['shared_path'] = '/nfs/home/var/opt/gitlab-data/shared'\ngitlab_ci['builds_directory'] = '/nfs/home/var/opt/gitlab-data/builds'"
+    dest: /etc/gitlab/gitlab.rb
+
+- name: reconfigure gitlab
+  shell: gitlab-ctl reconfigure
+
+- name: setup gitlab
+  shell: gitlab-rake gitlab:setup

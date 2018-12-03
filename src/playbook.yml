@@ -25,8 +25,8 @@
           - addr-gitlab-05
         instances:
           - { index: 1, tag: postgre, gcp_machine_type: f1-micro}
-          - { index: 2, tag: redis_master, gcp_machine_type: f1-micro}
-          - { index: 3, tag: redis_slave, gcp_machine_type: f1-micro}
+          - { index: 2, tag: redis-master, gcp_machine_type: f1-micro}
+          - { index: 3, tag: redis-slave, gcp_machine_type: f1-micro}
           - { index: 4, tag: nfs, gcp_machine_type: f1-micro}
           - { index: 5, tag: gitlab, gcp_machine_type: f1-micro}
 
@@ -34,3 +34,52 @@
   become: yes
   roles:
     - { role: users, payload: users.yml }
+
+- hosts: postgre
+  become: yes
+  roles:
+    - {
+       role: postgre,
+       password: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}"
+      }
+
+- hosts: redis-master
+  become: yes
+  roles:
+    - {
+       role: redis-master,
+       password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
+       redisMasterAddress: "{{ groups['redis-master'][0] }}"
+      }
+
+- hosts: redis-slave
+  become: yes
+  roles:
+    - {
+       role: redis-slave,
+       password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
+       redisMasterAddress: "{{ groups['redis-master'][0] }}",
+       redisSlaveAddress: "{{ groups['redis-slave'][0] }}"
+      }
+
+- hosts: nfs
+  become: yes
+  roles:
+    - {
+       role: nfs,
+       gitlabAddress: "{{ groups['gitlab'][0] }}"
+      }
+
+- hosts: gitlab
+  become: yes
+  roles:
+    - {
+       role: gitlab,
+       nfsAddress: "{{ groups['nfs'][0] }}",
+       gitlabAddress: "{{ groups['gitlab'][0] }}",
+       postgreAddress: "{{ groups['postgre'][0] }}",
+       postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
+       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
+       redisMasterAddress: "{{ groups['redis-master'][0] }}",
+       redisSlaveAddress: "{{ groups['redis-slave'][0] }}"
+      }

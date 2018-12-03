@@ -1,0 +1,14 @@
+- name: install NFS sever
+  apt:
+    name: nfs-kernel-server
+
+- name: config of nfs
+  copy:
+    content: "/home {{gitlabAddress}}(rw,sync,no_root_squash,no_subtree_check)"
+    dest: "/etc/exports"
+
+- name: restart nfs server
+  systemd:
+    name: nfs-kernel-server
+    state: restarted
+    enabled: yes

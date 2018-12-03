@@ -1,7 +1,7 @@
 users:
   - name: deployer
     shell: /bin/bash
-    password: "{{ lookup('passwordstore', 'ansible/uc/deployer create=true length=8') }}"
+    password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}"
     groups:
       - sudo
     keys:
