@@ -17,18 +17,21 @@
           - disk-gitlab-03
           - disk-gitlab-04
           - disk-gitlab-05
+          - disk-gitlab-06
         addresses:
           - addr-gitlab-01
           - addr-gitlab-02
           - addr-gitlab-03
           - addr-gitlab-04
           - addr-gitlab-05
+          - addr-gitlab-06
         instances:
-          - { index: 1, tag: postgre, gcp_machine_type: f1-micro}
-          - { index: 2, tag: redis-master, gcp_machine_type: f1-micro}
-          - { index: 3, tag: redis-slave, gcp_machine_type: f1-micro}
-          - { index: 4, tag: nfs, gcp_machine_type: f1-micro}
-          - { index: 5, tag: gitlab, gcp_machine_type: f1-micro}
+          - { index: 1, tag: postgre, gcp_machine_type: n1-standard-1}
+          - { index: 2, tag: redis-master, gcp_machine_type: n1-standard-1}
+          - { index: 3, tag: redis-slave, gcp_machine_type: g1-small}
+          - { index: 4, tag: redis-slave, gcp_machine_type: g1-small}
+          - { index: 5, tag: nfs, gcp_machine_type: n1-standard-1}
+          - { index: 6, tag: gitlab, gcp_machine_type: n1-standard-2}
 
 - hosts: all
   become: yes
@@ -58,17 +61,13 @@
     - {
        role: redis-slave,
        password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
-       redisMasterAddress: "{{ groups['redis-master'][0] }}",
-       redisSlaveAddress: "{{ groups['redis-slave'][0] }}"
+       redisMasterAddress: "{{ groups['redis-master'][0] }}"
       }
 
 - hosts: nfs
   become: yes
   roles:
-    - {
-       role: nfs,
-       gitlabAddress: "{{ groups['gitlab'][0] }}"
-      }
+    - {role: nfs}
 
 - hosts: gitlab
   become: yes
@@ -81,5 +80,6 @@
        postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
        redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
        redisMasterAddress: "{{ groups['redis-master'][0] }}",
-       redisSlaveAddress: "{{ groups['redis-slave'][0] }}"
+       redisSlaveAddress1: "{{ groups['redis-slave'][0] }}",
+       redisSlaveAddress2: "{{ groups['redis-slave'][1] }}"
       }

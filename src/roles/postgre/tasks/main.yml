@@ -11,23 +11,17 @@
     path: "/etc/postgresql/9.5/main/postgresql.conf"
     regexp: '^#listen_addresses'
     replace: listen_addresses
-    #notify:
-    #- restart postgresql
 
 - name: Replace listen addresses
   replace:
     path: "/etc/postgresql/9.5/main/postgresql.conf"
     regexp: "^listen_addresses\\s+=\\s+'(.*)'"
     replace: "listen_addresses = '*'"
-    #notify:
-    #- restart postgresql
 
 - name: Add pg_hba.conf line to permit access from network
   template:
     src: pg_hba.conf.j2
     dest: "/etc/postgresql/9.5/main/pg_hba.conf"
-    #notify:
-    #- restart postgresql
 
 - name: Ensure service is enabled and started
   service:
@@ -46,7 +40,7 @@
   become_user: postgres
   postgresql_db:
     name: gitlabhq_production
-    encoding: 'UTF-8'
+    encoding: 'unicode'
     owner: gitlab
     state: present
 

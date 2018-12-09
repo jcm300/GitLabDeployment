@@ -2,10 +2,17 @@
   apt:
     name: nfs-kernel-server
 
+- name: create NFS dirs
+  shell: "mkdir -p /var/opt/gitlab/.ssh /var/opt/gitlab/gitlab-rails/uploads /var/opt/gitlab/gitlab-rails/shared /var/opt/gitlab/gitlab-ci/builds /var/opt/gitlab/git-data"
+
 - name: config of nfs
-  copy:
-    content: "/home {{gitlabAddress}}(rw,sync,no_root_squash,no_subtree_check)"
-    dest: "/etc/exports"
+  shell: "echo \"{{item}}\" >> /etc/exports"
+  loop:
+    - "/var/opt/gitlab/.ssh *(rw,sync,no_root_squash,no_all_squash)"
+    - "/var/opt/gitlab/gitlab-rails/uploads *(rw,sync,no_root_squash,no_all_squash)"   
+    - "/var/opt/gitlab/gitlab-rails/shared *(rw,sync,no_root_squash,no_all_squash)"
+    - "/var/opt/gitlab/gitlab-ci/builds *(rw,sync,no_root_squash,no_all_squash)"
+    - "/var/opt/gitlab/git-data *(rw,sync,no_root_squash,no_all_squash)"
 
 - name: restart nfs server
   systemd:

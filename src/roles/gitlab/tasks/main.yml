@@ -14,16 +14,29 @@
     - postfix
     - nfs-common
     - postgresql-client
+    - policycoreutils
+    - rsync
 
-- name: create NFS dir
-  file: 
-    path: /nfs/home
-    state: directory
+- name: create NFS dirs
+  shell: "mkdir -p /var/opt/gitlab/.ssh /var/opt/gitlab/gitlab-rails/uploads /var/opt/gitlab/gitlab-rails/shared /var/opt/gitlab/gitlab-ci/builds /var/opt/gitlab/git-data"
 
 - name: config NFS
   shell: "echo {{item}} >> /etc/fstab"
   loop:
-    - "{{nfsAddress}}:/home       /nfs/home      nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - "{{nfsAddress}}:/var/opt/gitlab/.ssh /var/opt/gitlab/.ssh nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-rails/uploads /var/opt/gitlab/gitlab-rails/uploads nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-rails/shared /var/opt/gitlab/gitlab-rails/shared nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-ci/builds /var/opt/gitlab/gitlab-ci/builds nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - "{{nfsAddress}}:/var/opt/gitlab/git-data /var/opt/gitlab/git-data nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+
+- name: mount folders
+  shell: "mount {{item}}"
+  loop:
+    - "/var/opt/gitlab/.ssh"
+    - "/var/opt/gitlab/gitlab-rails/uploads"
+    - "/var/opt/gitlab/gitlab-rails/shared"
+    - "/var/opt/gitlab/gitlab-ci/builds"
+    - "/var/opt/gitlab/git-data"
 
 - name: pre-install for gitlab
   shell: 
@@ -36,11 +49,8 @@
 
 - name: gitlab configs
   copy:
-    content: "external_url = 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = 'nfs/home/var/opt/gitlab/git-data'\nroles ['application_role']\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'UTF-8'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\nredis['master_name'] = 'gitlab-redis'\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress}}', 'port' => 26379}\n]\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002\ngit_data_dirs({'default' => {'path' => '/nfs/home/var/opt/gitlab-data/git-data'} })\nuser['home'] = '/nfs/home/var/opt/gitlab-data/home'\ngitlab_rails['uploads_directory'] = '/nfs/home/var/opt/gitlab-data/uploads'\ngitlab_rails['shared_path'] = '/nfs/home/var/opt/gitlab-data/shared'\ngitlab_ci['builds_directory'] = '/nfs/home/var/opt/gitlab-data/builds'"
+    content: "external_url 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = '/var/opt/gitlab/git-data'\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'unicode'\ngitlab_rails['db_database'] = 'gitlabhq_production'\ngitlab_rails['db_pool'] = 10\ngitlab_rails['db_username'] = 'gitlab'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_port'] = 5432\nredis['master_name'] = 'instance-gitlab-02'\ngitlab_rails['redis_port'] = 6379\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_socket'] = nil\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress1}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress2}}', 'port' => 26379}\n]\npostgresql['enable'] = false\nredis['enable'] = false\nnginx['enable'] = true\nnginx['redirect_http_to_https'] = true\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002" 
     dest: /etc/gitlab/gitlab.rb
 
 - name: reconfigure gitlab
   shell: gitlab-ctl reconfigure
-
-- name: setup gitlab
-  shell: gitlab-rake gitlab:setup
