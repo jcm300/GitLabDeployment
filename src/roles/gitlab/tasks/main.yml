@@ -18,19 +18,25 @@
     - rsync
 
 - name: create NFS dirs
-  shell: "mkdir -p /var/opt/gitlab/.ssh /var/opt/gitlab/gitlab-rails/uploads /var/opt/gitlab/gitlab-rails/shared /var/opt/gitlab/gitlab-ci/builds /var/opt/gitlab/git-data"
-
-- name: config NFS
-  shell: "echo {{item}} >> /etc/fstab"
+  file:
+    path: '{{item}}'
+    state: directory
   loop:
-    - "{{nfsAddress}}:/var/opt/gitlab/.ssh /var/opt/gitlab/.ssh nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
-    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-rails/uploads /var/opt/gitlab/gitlab-rails/uploads nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
-    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-rails/shared /var/opt/gitlab/gitlab-rails/shared nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
-    - "{{nfsAddress}}:/var/opt/gitlab/gitlab-ci/builds /var/opt/gitlab/gitlab-ci/builds nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
-    - "{{nfsAddress}}:/var/opt/gitlab/git-data /var/opt/gitlab/git-data nfs4 defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive 0 2"
+    - /var/opt/gitlab/.ssh 
+    - /var/opt/gitlab/gitlab-rails/uploads 
+    - /var/opt/gitlab/gitlab-rails/shared 
+    - /var/opt/gitlab/gitlab-ci/builds 
+    - /var/opt/gitlab/git-data
 
 - name: mount folders
-  shell: "mount {{item}}"
+  mount:
+    path: '{{item}}'
+    src: "{{nfsAddress}}:{{item}}"
+    opts: "defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive"
+    dump: 0
+    passno: 2
+    fstype: nfs4
+    state: mounted
   loop:
     - "/var/opt/gitlab/.ssh"
     - "/var/opt/gitlab/gitlab-rails/uploads"
@@ -49,8 +55,21 @@
 
 - name: gitlab configs
   copy:
-    content: "external_url 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = '/var/opt/gitlab/git-data'\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'unicode'\ngitlab_rails['db_database'] = 'gitlabhq_production'\ngitlab_rails['db_pool'] = 10\ngitlab_rails['db_username'] = 'gitlab'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_port'] = 5432\nredis['master_name'] = 'instance-gitlab-02'\ngitlab_rails['redis_port'] = 6379\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_socket'] = nil\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress1}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress2}}', 'port' => 26379}\n]\npostgresql['enable'] = false\nredis['enable'] = false\nnginx['enable'] = true\nnginx['redirect_http_to_https'] = true\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002" 
+    content: "external_url 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = '/var/opt/gitlab/git-data'\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'unicode'\ngitlab_rails['db_database'] = 'gitlabhq_production'\ngitlab_rails['db_pool'] = 10\ngitlab_rails['db_username'] = 'gitlab'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_port'] = 5432\nredis['master_name'] = 'instance-gitlab-02'\ngitlab_rails['redis_port'] = 6379\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_socket'] = nil\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress1}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress2}}', 'port' => 26379}\n]\npostgresql['enable'] = false\nredis['enable'] = false\nnginx['enable'] = true\nnginx['redirect_http_to_https'] = true\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002\n" 
     dest: /etc/gitlab/gitlab.rb
+
+- name: more gitlab configs
+  shell: "echo \"{{item[0]}}['{{item[1]}}']='{{item[2]}}'\" >> /etc/gitlab/gitlab.rb"
+  loop:
+    - ["gitlab_shell","secret_token","{{gitlabSecrets.gitlab_shell.secret_token}}"]
+    - ["gitlab_rails","otp_key_base","{{gitlabSecrets.gitlab_rails.otp_key_base}}"]
+    - ["gitlab_rails","secret_key_base","{{gitlabSecrets.gitlab_rails.secret_key_base}}"]
+    - ["gitlab_rails","db_key_base","{{gitlabSecrets.gitlab_rails.db_key_base}}"]
+
+- name: prevent database migrations
+  file:
+    path: /etc/gitlab/skip-auto-reconfigure
+    state: touch
 
 - name: reconfigure gitlab
   shell: gitlab-ctl reconfigure
