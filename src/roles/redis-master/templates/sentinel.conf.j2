@@ -1,0 +1,6 @@
+bind 0.0.0.0
+port 26379
+sentinel monitor instance-gitlab-02 {{groups['redis-master'][0]}} 6379 2
+sentinel auth-pass instance-gitlab-02 "{{password}}"
+sentinel down-after-milliseconds instance-gitlab-02 10000
+sentinel failover-timeout instance-gitlab-02 30000

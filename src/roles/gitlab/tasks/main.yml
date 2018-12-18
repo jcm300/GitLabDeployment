@@ -31,7 +31,7 @@
 - name: mount folders
   mount:
     path: '{{item}}'
-    src: "{{nfsAddress}}:{{item}}"
+    src: "{{groups['nfs'][0]}}:{{item}}"
     opts: "defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive"
     dump: 0
     passno: 2
@@ -54,17 +54,14 @@
     name: gitlab-ce
 
 - name: gitlab configs
-  copy:
-    content: "external_url 'http://{{gitlabAddress}}'\nhigh_availability['mountpoint'] = '/var/opt/gitlab/git-data'\ngitlab_rails['db_adapter'] = 'postgresql'\ngitlab_rails['db_encoding'] = 'unicode'\ngitlab_rails['db_database'] = 'gitlabhq_production'\ngitlab_rails['db_pool'] = 10\ngitlab_rails['db_username'] = 'gitlab'\ngitlab_rails['db_password'] = '{{postgrePassword}}'\ngitlab_rails['db_host'] = '{{postgreAddress}}'\ngitlab_rails['db_port'] = 5432\nredis['master_name'] = 'instance-gitlab-02'\ngitlab_rails['redis_port'] = 6379\nredis['master_password'] = '{{redisPassword}}'\ngitlab_rails['redis_socket'] = nil\ngitlab_rails['redis_sentinels'] = [\n    {'host' => '{{redisMasterAddress}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress1}}', 'port' => 26379},\n    {'host' => '{{redisSlaveAddress2}}', 'port' => 26379}\n]\npostgresql['enable'] = false\nredis['enable'] = false\nnginx['enable'] = true\nnginx['redirect_http_to_https'] = true\nuser['uid'] = 9000\nuser['gid'] = 9000\nweb_server['uid'] = 9001\nweb_server['gid'] = 9001\nregistry['uid'] = 9002\nregistry['gid'] = 9002\n" 
+  template:
+    src: gitlab.rb.j2
     dest: /etc/gitlab/gitlab.rb
 
-- name: more gitlab configs
-  shell: "echo \"{{item[0]}}['{{item[1]}}']='{{item[2]}}'\" >> /etc/gitlab/gitlab.rb"
-  loop:
-    - ["gitlab_shell","secret_token","{{gitlabSecrets.gitlab_shell.secret_token}}"]
-    - ["gitlab_rails","otp_key_base","{{gitlabSecrets.gitlab_rails.otp_key_base}}"]
-    - ["gitlab_rails","secret_key_base","{{gitlabSecrets.gitlab_rails.secret_key_base}}"]
-    - ["gitlab_rails","db_key_base","{{gitlabSecrets.gitlab_rails.db_key_base}}"]
+- name: copy secrets
+  copy:
+    src: "/tmp/{{groups['first-gitlab'][0]}}/etc/gitlab/gitlab-secrets.json"
+    dest: /etc/gitlab/gitlab-secrets.json
 
 - name: prevent database migrations
   file:

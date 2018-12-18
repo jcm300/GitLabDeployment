@@ -38,19 +38,23 @@
       - ip_protocol: tcp
         ports:
           - 22
+          - 22222
           - 80
           - 8080
           - 5432
           - 6379
           - 26379
+          - 443
           - 111
           - 2049
-          - 33333
+          - 1110
+          - 4045
       - ip_protocol: udp
         ports:
           - 111
           - 2049
-          - 33333
+          - 1110
+          - 4045
       - ip_protocol: icmp
     network: "global/networks/{{ network.name }}"
     project: "{{ gcp_project }}"

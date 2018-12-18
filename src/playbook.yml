@@ -19,6 +19,7 @@
           - disk-gitlab-05
           - disk-gitlab-06
           - disk-gitlab-07
+          - disk-gitlab-08
         addresses:
           - addr-gitlab-01
           - addr-gitlab-02
@@ -27,6 +28,7 @@
           - addr-gitlab-05
           - addr-gitlab-06
           - addr-gitlab-07
+          - addr-gitlab-08
         instances:
           - { index: 1, tag: postgre, gcp_machine_type: n1-standard-1}
           - { index: 2, tag: redis-master, gcp_machine_type: n1-standard-1}
@@ -35,11 +37,19 @@
           - { index: 5, tag: nfs, gcp_machine_type: n1-standard-1}
           - { index: 6, tag: first-gitlab, gcp_machine_type: n1-standard-1}
           - { index: 7, tag: gitlab, gcp_machine_type: n1-standard-1}
+          - { index: 8, tag: haproxy, gcp_machine_type: n1-standard-1}
 
 - hosts: all
   become: yes
   roles:
-    - { role: users, payload: users.yml }
+    - {
+       role: users,
+       username: deployer,
+       shell: /bin/bash,
+       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}",
+       group: sudo,
+       key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      }
 
 - hosts: postgre
   become: yes
@@ -55,7 +65,6 @@
     - {
        role: redis-master,
        password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
-       redisMasterAddress: "{{ groups['redis-master'][0] }}"
       }
 
 - hosts: redis-slave
@@ -64,7 +73,6 @@
     - {
        role: redis-slave,
        password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
-       redisMasterAddress: "{{ groups['redis-master'][0] }}"
       }
 
 - hosts: nfs
@@ -77,14 +85,8 @@
   roles:
     - {
        role: first-gitlab,
-       nfsAddress: "{{ groups['nfs'][0] }}",
-       gitlabAddress: "{{ groups['first-gitlab'][0] }}",
-       postgreAddress: "{{ groups['postgre'][0] }}",
        postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
-       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
-       redisMasterAddress: "{{ groups['redis-master'][0] }}",
-       redisSlaveAddress1: "{{ groups['redis-slave'][0] }}",
-       redisSlaveAddress2: "{{ groups['redis-slave'][1] }}"
+       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}"
       }
 
 - hosts: gitlab
@@ -92,14 +94,15 @@
   roles:
     - {
        role: gitlab,
-       nfsAddress: "{{ groups['nfs'][0] }}",
-       gitlabAddress: "{{ groups['gitlab'][0] }}",
-       postgreAddress: "{{ groups['postgre'][0] }}",
        postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
-       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
-       redisMasterAddress: "{{ groups['redis-master'][0] }}",
-       redisSlaveAddress1: "{{ groups['redis-slave'][0] }}",
-       redisSlaveAddress2: "{{ groups['redis-slave'][1] }}",
-       firstGitlabAddress: "{{ groups['first-gitlab'][0] }}",
-       gitlabSecrets: "{{ lookup('file','/tmp/{{firstGitlabAddress}}/etc/gitlab/gitlab-secrets.json') | from_json }}"
+       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}"
+      }
+
+- hosts: haproxy
+  become: yes
+  roles:
+    - {
+       role: haproxy,
+       username: "deployer",
+       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}"
       }
