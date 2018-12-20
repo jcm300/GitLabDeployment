@@ -12,3 +12,6 @@ host all  all {{ host }}/32 md5
 {% for host in groups['gitlab'] %}
 host all  all {{ host }}/32 md5
 {% endfor %}
+{% for host in groups['postgre-slave'] %}
+host replication gitlab {{ host }}/32 md5
+{% endfor %}

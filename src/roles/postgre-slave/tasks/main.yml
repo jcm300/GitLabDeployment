@@ -1,0 +1,61 @@
+- name: install necessary packages
+  apt:
+    name: '{{item}}'
+  loop:
+    - postgresql
+    - libpq-dev
+    - python-psycopg2
+
+- name: Uncomment listen addresses configuration
+  replace:
+    path: "/etc/postgresql/9.5/main/postgresql.conf"
+    regexp: '^#listen_addresses'
+    replace: listen_addresses
+
+- name: Replace listen addresses
+  replace:
+    path: "/etc/postgresql/9.5/main/postgresql.conf"
+    regexp: "^listen_addresses\\s+=\\s+'(.*)'"
+    replace: "listen_addresses = '*'"
+
+- name: Add pg_hba.conf line to permit access from network
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/9.5/main/pg_hba.conf"
+
+- name: config to replication
+  lineinfile:
+    path: /etc/postgresql/9.5/main/postgresql.conf
+    line: "wal_level = 'hot_standby'\nmax_wal_senders = 3\nwal_keep_segments = 8\nhot_standby = 'on'\narchive_mode = on\narchive_command = 'cd .'"
+
+- name: Ensure service is enabled and started
+  service:
+    name: postgresql
+    state: restarted
+    enabled: yes
+
+- name: Ensure service is stopped
+  service:
+    name: postgresql
+    state: stopped
+
+- name: Cleaning up old cluster directory
+  file:
+    path: /var/lib/postgresql/9.5/main
+    state: absent
+
+- name: Starting base backup as gitlab
+  shell: "PGPASSWORD=\"{{password}}\" pg_basebackup -h {{groups['postgre-master'][0]}} -D /var/lib/postgresql/9.5/main -U gitlab -v -P -w"
+
+- name: Writing recovery.conf file
+  copy:
+    dest: /var/lib/postgresql/9.5/main/recovery.conf
+    content: "standby_mode = 'on'\nprimary_conninfo = 'host={{groups['postgre-master'][0]}} port=5432 user=gitlab password={{password}}'\ntrigger_file = '/tmp/postgresql.trigger'"
+
+- name: change permissions
+  shell: "chown -R postgres:postgres /var/lib/postgresql"
+
+- name: Ensure service is started
+  service:
+    name: postgresql
+    state: started

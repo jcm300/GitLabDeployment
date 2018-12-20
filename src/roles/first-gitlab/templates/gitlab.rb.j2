@@ -9,10 +9,10 @@ gitlab_rails['db_database'] = 'gitlabhq_production'
 gitlab_rails['db_pool'] = 10
 gitlab_rails['db_username'] = 'gitlab'
 gitlab_rails['db_password'] = '{{postgrePassword}}'
-gitlab_rails['db_host'] = '{{groups['postgre'][0]}}'
+gitlab_rails['db_host'] = '{{groups['postgre-master'][0]}}{% for host in groups['postgre-slave'] %} , {{ host }}{% endfor %}'
 gitlab_rails['db_port'] = 5432
 
-redis['master_name'] = 'instance-gitlab-02'
+redis['master_name'] = 'instance-gitlab-03'
 gitlab_rails['redis_port'] = 6379
 redis['master_password'] = '{{redisPassword}}'
 gitlab_rails['redis_sentinels'] = [

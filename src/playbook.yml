@@ -20,6 +20,7 @@
           - disk-gitlab-06
           - disk-gitlab-07
           - disk-gitlab-08
+          - disk-gitlab-09
         addresses:
           - addr-gitlab-01
           - addr-gitlab-02
@@ -29,15 +30,17 @@
           - addr-gitlab-06
           - addr-gitlab-07
           - addr-gitlab-08
+          - addr-gitlab-09
         instances:
-          - { index: 1, tag: postgre, gcp_machine_type: n1-standard-1}
-          - { index: 2, tag: redis-master, gcp_machine_type: n1-standard-1}
-          - { index: 3, tag: redis-slave, gcp_machine_type: g1-small}
+          - { index: 1, tag: postgre-master, gcp_machine_type: n1-standard-1}
+          - { index: 2, tag: postgre-slave, gcp_machine_type: n1-standard-1}
+          - { index: 3, tag: redis-master, gcp_machine_type: n1-standard-1}
           - { index: 4, tag: redis-slave, gcp_machine_type: g1-small}
-          - { index: 5, tag: nfs, gcp_machine_type: n1-standard-1}
-          - { index: 6, tag: first-gitlab, gcp_machine_type: n1-standard-1}
-          - { index: 7, tag: gitlab, gcp_machine_type: n1-standard-1}
-          - { index: 8, tag: haproxy, gcp_machine_type: n1-standard-1}
+          - { index: 5, tag: redis-slave, gcp_machine_type: g1-small}
+          - { index: 6, tag: nfs, gcp_machine_type: n1-standard-1}
+          - { index: 7, tag: first-gitlab, gcp_machine_type: n1-standard-1}
+          - { index: 8, tag: gitlab, gcp_machine_type: n1-standard-1}
+          - { index: 9, tag: haproxy, gcp_machine_type: n1-standard-1}
 
 - hosts: all
   become: yes
@@ -51,11 +54,19 @@
        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
       }
 
-- hosts: postgre
+- hosts: postgre-master
   become: yes
   roles:
     - {
-       role: postgre,
+       role: postgre-master,
+       password: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}"
+      }
+
+- hosts: postgre-slave
+  become: yes
+  roles:
+    - {
+       role: postgre-slave,
        password: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}"
       }
 

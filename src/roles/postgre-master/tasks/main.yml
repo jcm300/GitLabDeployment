@@ -57,3 +57,13 @@
     name: pg_trgm
     db: gitlabhq_production
     state: present
+
+- name: config to replication
+  lineinfile:
+    path: /etc/postgresql/9.5/main/postgresql.conf
+    line: "wal_level = 'hot_standby'\nmax_wal_senders = 3\nwal_keep_segments = 8\nhot_standby = 'on'\narchive_mode = on\narchive_command = 'cd .'"
+
+- name: Ensure service is restarted
+  service:
+    name: postgresql
+    state: restarted
