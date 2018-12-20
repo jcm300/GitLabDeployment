@@ -2,3 +2,5 @@ bind 0.0.0.0
 port 6379
 requirepass "{{password}}"
 masterauth "{{password}}"
+dir /var/lib/redis
+dbfilename dump.rdb

@@ -1,6 +1,6 @@
-1)
-    - Add load balancers
-    - replication of DB
+1
+    - replication of DB, Load Balancers and NFS
+    - enable https
 
 2)
     - Add what was done on pratical lecture

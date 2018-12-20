@@ -3,3 +3,5 @@ port 6379
 requirepass "{{password}}"
 masterauth "{{password}}"
 slaveof {{groups['redis-master'][0]}} 6379
+dir /var/lib/redis
+dbfilename dump.rdb
