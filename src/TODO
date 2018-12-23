@@ -1,5 +1,5 @@
 1
-    - replication of DB, Load Balancers and NFS
+    - failover of DB, Load Balancers
     - enable https
 
 2)

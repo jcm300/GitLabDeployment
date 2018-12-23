@@ -1,0 +1,38 @@
+- name: install glusterFS sever
+  apt:
+    name: glusterfs-server
+
+- name: enable and started glusterfs server
+  systemd:
+    name: glusterfs-server
+    state: restarted
+    enabled: yes
+
+- name: update hosts 
+  lineinfile:
+    path: /etc/hosts
+    regexp: "127.0.0.1 localhost"
+    line: "127.0.0.1 localhost gluster0"
+
+- name: add to hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{% for host in groups['gfs'] %}{{host}}\tgluster{{loop.index}}\n{% endfor %}"
+
+- name: create dir
+  file:
+    path: /glusterfs/replica
+    state: directory
+
+- name: probe the nodes
+  shell: "gluster peer probe gluster{{item}}"
+  with_items: "[{% for host in groups['gfs'] %}{%if loop.index0 > 0 %},{% endif %}{{loop.index}}{% endfor %}]"
+
+- name: create volume
+  shell: "gluster volume create gitlab replica {{1+(groups['gfs']|length)}} transport tcp gluster0:/glusterfs/replica {% for host in groups['gfs'] %}gluster{{loop.index}}:/glusterfs/replica {% endfor %} force"
+
+- name: start volume
+  shell: gluster volume start gitlab
+
+- name: give acess to volume
+  shell: gluster volume set gitlab auth.allow "*"

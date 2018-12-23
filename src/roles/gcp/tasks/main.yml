@@ -46,15 +46,22 @@
           - 26379
           - 443
           - 111
+          - 24007
+          - 24008
+          - 38465
+          - 38466
+          - 38467
+          - 38468
+          - 38469
+          - 49152
+          - 49153
+          - 49154
+          - 49155
+          - 49156
           - 2049
-          - 1110
-          - 4045
       - ip_protocol: udp
         ports:
           - 111
-          - 2049
-          - 1110
-          - 4045
       - ip_protocol: icmp
     network: "global/networks/{{ network.name }}"
     project: "{{ gcp_project }}"

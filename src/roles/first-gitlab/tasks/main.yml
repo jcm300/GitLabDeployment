@@ -12,37 +12,47 @@
     - openssh-server
     - ca-certificates
     - postfix
-    - nfs-common
+    - glusterfs-client
     - postgresql-client
     - policycoreutils
     - rsync
+    - attr
 
-- name: create NFS dirs
+- name: create dir
   file:
-    path: '{{item}}'
+    path: "/gitlab-data"
     state: directory
-  loop:
-    - /var/opt/gitlab/.ssh 
-    - /var/opt/gitlab/gitlab-rails/uploads 
-    - /var/opt/gitlab/gitlab-rails/shared 
-    - /var/opt/gitlab/gitlab-ci/builds 
-    - /var/opt/gitlab/git-data
+
+- name: add to hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{groups['first-gfs'][0]}}\tgluster0\n{% for host in groups['gfs'] %}{{host}}\tgluster{{loop.index}}\n{% endfor %}"
 
 - name: mount folders
   mount:
-    path: '{{item}}'
-    src: "{{groups['nfs'][0]}}:{{item}}"
-    opts: "defaults,soft,rsize=1048576,wsize=1048576,noatime,nofail,lookupcache=positive"
+    path: "/gitlab-data"
+    src: "{{groups['first-gfs'][0]}}:/gitlab"
+    opts: "defaults,_netdev,backupvolfile-server={{groups['gfs']}}"
     dump: 0
-    passno: 2
-    fstype: nfs4
+    passno: 0
+    fstype: glusterfs
     state: mounted
+
+- name: create dirs
+  file:
+    path: "/gitlab-data/{{item}}"
+    state: directory
   loop:
-    - "/var/opt/gitlab/.ssh"
-    - "/var/opt/gitlab/gitlab-rails/uploads"
-    - "/var/opt/gitlab/gitlab-rails/shared"
-    - "/var/opt/gitlab/gitlab-ci/builds"
-    - "/var/opt/gitlab/git-data"
+    - ".ssh" 
+    - "uploads"
+    - "shared"
+    - "builds "
+    - "git-data"
+
+- name: add to /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    line: "/gitlab-data/git-data /var/opt/gitlab/git-data none bind 0 0\n/gitlab-data/.ssh /var/opt/gitlab/.ssh none bind 0 0\n/gitlab-data/uploads /var/opt/gitlab/gitlab-rails/uploads none bind 0 0\n/gitlab-data/shared /var/opt/gitlab/gitlab-rails/shared none bind 0 0\n/gitlab-data/builds /var/opt/gitlab/gitlab-ci/builds none bind 0 0\n"
 
 - name: pre-install for gitlab
   shell: 
@@ -60,9 +70,6 @@
 
 - name: reconfigure gitlab
   shell: gitlab-ctl reconfigure
-
-- name: rake gitlab
-  shell: force=yes gitlab-rake gitlab:setup
 
 - name: fetch secrets
   fetch:

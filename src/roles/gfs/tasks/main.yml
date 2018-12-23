@@ -1,0 +1,29 @@
+- name: install glusterFS sever
+  apt:
+    name: glusterfs-server
+
+- name: enable and start glusterfs server
+  systemd:
+    name: glusterfs-server
+    state: restarted
+    enabled: yes
+
+- name: create dir
+  file:
+    path: /glusterfs/replica
+    state: directory
+
+- name: update count
+  set_fact:
+      count: "{{1+(count|int)}}"
+
+- name: update hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: "127.0.0.1 localhost"
+    line: "127.0.0.1 localhost gluster{{count}}"
+
+- name: add to hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{groups['first-gfs'][0]}}\tgluster0\n{% for host in groups['gfs'] %}{% if count != loop.index %}{{host}}\tgluster{{loop.index}}\n{% endif %}{% endfor %}"
