@@ -1,0 +1,54 @@
+- name: upgrade
+  apt:
+    upgrade: yes
+
+- name: Install packages
+  apt:
+    name: '{{item}}'
+    state: present
+  loop:
+    - wget
+    - openjdk-8-jdk
+    - apt-transport-https
+
+- name: Import the Elasticsearch PGP Key
+  shell: wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+
+- name: save repository
+  shell: echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-6.x.list
+
+- name: install elasticsearch and kibana
+  apt:
+    name: '{{item}}'
+    update_cache: yes
+    state: present
+  loop:
+    - elasticsearch
+    - kibana
+
+- name: config elasticsearch
+  lineinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    regexp: '#?network\.host:[^\n]*'
+    line: 'network.host: 0.0.0.0'
+
+- name: update max virtual memory
+  command: sysctl -w vm.max_map_count=262144
+
+- name: config kibana 
+  lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: '#server\.host:[^\n]*'
+    line: "server.host: '0.0.0.0'"
+
+- name: install ingest-geoip
+  shell: /usr/share/elasticsearch/bin/elasticsearch-plugin install ingest-geoip -b
+
+- name: run elasticsearch and kibana
+  systemd:
+    name: '{{item}}'
+    state: restarted
+    enabled: yes
+  loop:
+    - elasticsearch
+    - kibana

@@ -16,7 +16,7 @@
     regexp: "#?\ ?Port[^\n]+"
     line: "Port 22222"
 
-- name: stop sshd
+- name: restart sshd
   service:
     name: sshd
     state: restarted

@@ -1,0 +1,39 @@
+- name: upgrade
+  apt:
+    upgrade: yes
+
+- name: Install packages
+  apt:
+    name: '{{item}}'
+    state: present
+  loop:
+    - wget
+    - openjdk-8-jdk
+    - apt-transport-https
+
+- name: Import the Elasticsearch PGP Key
+  shell: wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+
+- name: save repository
+  shell: echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-6.x.list
+
+- name: install logstash
+  apt:
+    name: logstash
+    update_cache: yes
+    state: present
+
+- name: create conf file
+  copy:
+    content: "input {\n  beats {\n    port => 5044\n  }\n}\n\noutput {\n  elasticsearch {\n    hosts => '{{elasticsearchAddress}}:9200'\n    index => '%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}'\n    document_type => '%{[@metadata][type]}'\n  }\n}"
+    dest: /etc/logstash/conf.d/simple.conf
+    force: no
+    group: root
+    owner: root
+    mode: 0555
+
+- name: run logstash
+  systemd:
+    name: logstash
+    state: restarted
+    enabled: yes
