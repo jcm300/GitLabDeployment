@@ -39,3 +39,9 @@ web_server['uid'] = 9001
 web_server['gid'] = 9001
 registry['uid'] = 9002
 registry['gid'] = 9002
+
+git_data_dirs({"default" => { "path" => "/gitlab-data/git-data"} })
+user['home'] = '/gitlab-data/'
+gitlab_rails['uploads_directory'] = '/gitlab-data/uploads'
+gitlab_rails['shared_path'] = '/gitlab-data/shared'
+gitlab_ci['builds_directory'] = '/gitlab-data/builds'

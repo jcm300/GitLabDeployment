@@ -125,6 +125,15 @@
        redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}"
       }
 
+- hosts: haproxy
+  become: yes
+  roles:
+    - {
+       role: haproxy,
+       username: "deployer",
+       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}"
+      }
+
 - hosts: elastic-kibana
   become: yes
   roles:
@@ -147,7 +156,7 @@
     - first-gfs
     - first-gitlab
     - gitlab
-    - haproxy
+      #- haproxy
   become: yes
   roles:
     - {
@@ -161,7 +170,8 @@
   become: yes
   roles:
     - {
-       role: haproxy,
-       username: "deployer",
-       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}"
+       role: beats,
+       kibanaAddress: "{{ groups['elastic-kibana'][0] }}",
+       logstashAddress: "{{ groups['logstash'][0] }}",
+       elasticsearchAddress: "{{ groups['elastic-kibana'][0] }}"
       }

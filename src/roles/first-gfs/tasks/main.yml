@@ -36,3 +36,9 @@
 
 - name: give acess to volume
   shell: gluster volume set gitlab auth.allow "*"
+
+- name: create dirs
+  file:
+    path: "/glusterfs/replica/{{item}}"
+    state: directory
+  with_items: [".ssh","uploads","shared","builds","git-data"]

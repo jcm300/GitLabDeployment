@@ -1,0 +1,182 @@
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      vars:
+        gcp_zone: us-central1-c
+        gcp_region: us-central1
+        gcp_project: sdb-gitlab
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: ../credentials.json
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20181030
+        disk_size: 12
+        disks:
+          - disk-gitlab-01
+          - disk-gitlab-02
+          - disk-gitlab-03
+          - disk-gitlab-04
+          - disk-gitlab-05
+          - disk-gitlab-06
+          - disk-gitlab-07
+          - disk-gitlab-08
+          - disk-gitlab-09
+          - disk-gitlab-10
+          - disk-gitlab-11
+          - disk-gitlab-12
+        addresses:
+          - addr-gitlab-01
+          - addr-gitlab-02
+          - addr-gitlab-03
+          - addr-gitlab-04
+          - addr-gitlab-05
+          - addr-gitlab-06
+          - addr-gitlab-07
+          - addr-gitlab-08
+          - addr-gitlab-09
+          - addr-gitlab-10
+          - addr-gitlab-11
+          - addr-gitlab-12
+        instances:
+          - {index: 1, tag: postgre-master, gcp_machine_type: n1-standard-1}
+          - {index: 2, tag: postgre-slave, gcp_machine_type: n1-standard-1}
+          - {index: 3, tag: redis-master, gcp_machine_type: n1-standard-1}
+          - {index: 4, tag: redis-slave, gcp_machine_type: g1-small}
+          - {index: 5, tag: redis-slave, gcp_machine_type: g1-small}
+          - {index: 6, tag: first-gfs, gcp_machine_type: n1-standard-1}
+          - {index: 7, tag: gfs, gcp_machine_type: n1-standard-1}
+          - {index: 8, tag: first-gitlab, gcp_machine_type: n1-standard-1}
+          - {index: 9, tag: gitlab, gcp_machine_type: n1-standard-1}
+          - {index: 10, tag: haproxy, gcp_machine_type: n1-standard-1}
+          - {index: 11, tag: logstash, gcp_machine_type: n1-standard-1}
+          - {index: 12, tag: elastic-kibana, gcp_machine_type: n1-standard-1}
+
+- hosts: all
+  become: yes
+  roles:
+    - {
+       role: users,
+       username: deployer,
+       shell: /bin/bash,
+       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}",
+       group: sudo,
+       key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      }
+
+- hosts: postgre-master
+  become: yes
+  roles:
+    - {
+       role: postgre-master,
+       password: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}"
+      }
+
+- hosts: postgre-slave
+  become: yes
+  roles:
+    - {
+       role: postgre-slave,
+       password: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}"
+      }
+
+- hosts: redis-master
+  become: yes
+  roles:
+    - {
+       role: redis-master,
+       password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
+      }
+
+- hosts: redis-slave
+  become: yes
+  roles:
+    - {
+       role: redis-slave,
+       password: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}",
+      }
+
+- hosts: gfs
+  become: yes
+  vars:
+    count: "0"
+  roles:
+    - {role: gfs}
+
+- hosts: first-gfs
+  become: yes
+  roles:
+    - {role: first-gfs}
+
+- hosts: first-gitlab
+  become: yes
+  roles:
+    - {
+       role: first-gitlab,
+       postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
+       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}"
+      }
+
+- hosts: gitlab
+  become: yes
+  roles:
+    - {
+       role: gitlab,
+       postgrePassword: "{{ lookup('passwordstore', 'ansible/postgre create=true length=8') }}",
+       redisPassword: "{{ lookup('passwordstore', 'ansible/redis create=true length=8') }}"
+      }
+
+- hosts: haproxy
+  become: yes
+  roles:
+    - {
+       role: haproxy,
+       username: "deployer",
+       password: "{{ lookup('passwordstore', 'ansible/deployer create=true length=8') }}"
+      }
+
+- hosts: elastic-kibana
+  become: yes
+  roles:
+    - {role: elastic-kibana}
+
+- hosts: logstash
+  become: yes
+  roles:
+    - {
+       role: logstash,
+       elasticsearchAddress: "{{groups['elastic-kibana'][0]}}"
+      }
+
+- hosts:
+    - postgre-master
+    - postgre-slave
+    - redis-master
+    - redis-slave
+    - gfs
+    - first-gfs
+    - first-gitlab
+    - gitlab
+      #- haproxy
+  become: yes
+  roles:
+    - {
+       role: beats,
+       kibanaAddress: "{{ groups['elastic-kibana'][0] }}",
+       logstashAddress: "{{ groups['logstash'][0] }}",
+       elasticsearchAddress: "{{ groups['elastic-kibana'][0] }}"
+      }
+
+- hosts: haproxy
+  become: yes
+  roles:
+    - {
+       role: beats,
+       kibanaAddress: "{{ groups['elastic-kibana'][0] }}",
+       logstashAddress: "{{ groups['logstash'][0] }}",
+       elasticsearchAddress: "{{ groups['elastic-kibana'][0] }}"
+      }
+
+- hosts: elastic-kibana
+  become: yes
+  roles:
+    - {role: jmeter}

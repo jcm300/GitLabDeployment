@@ -1,31 +1,41 @@
-- name: upgrade
-  apt:
-    upgrade: yes
+- name: Wait for apt-get
+  shell: "while pgrep unattended; do sleep 10; done;"
 
 - name: install packages
   apt:
     name: '{{item}}'
     state: present
+    update_cache: yes
   loop:
     - wget
     - apt-transport-https
 
+- name: Wait for apt-get
+  shell: "while pgrep unattended; do sleep 10; done;"
+
 - name: Import the Elasticsearch PGP Key
-  shell: wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+  #shell: wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
 
 - name: save repository
-  shell: echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-6.x.list
+  #shell: echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-6.x.list
+  apt_repository:
+    repo: "deb https://artifacts.elastic.co/packages/6.x/apt stable main"
+    state: present
+    filename: elastic-6.x
+    update_cache: yes
 
 - name: install beats
   apt:
     name: '{{item}}'
-    update_cache: yes
     state: present
   loop:
     - metricbeat
     - packetbeat
     - filebeat
-    - heartbeat-elastic
+      #- heartbeat-elastic
 
 - name: config beats
   replace:
@@ -39,14 +49,14 @@
     - ["packetbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
     - ["filebeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
     - ["filebeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
-    - ["heartbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
-    - ["heartbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
+      #- ["heartbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
+      #- ["heartbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
 
 - name: enable modules
   shell: "{{item[0]}} modules enable {{item[1]}}"
   with_nested:
     - [filebeat, metricbeat]
-    - "[system{% for g in group_names %}{% if 'postgre' in g %},postgresql{% endif %}{% if 'redis' in g %},redis{% endif %}{% if 'gitlab' in g %},nginx{% endif %}{% if 'haproxy' in g %},haproxy{% endif %}{% endfor %}]"
+    - "[\"system\"{% for g in group_names %}{% if 'postgre' in g %},\"postgresql\"{% endif %}{% if 'redis' in g %},\"redis\"{% endif %}{% if 'gitlab' in g %},\"nginx\"{% endif %}{% if 'haproxy' in g %},\"haproxy\"{% endif %}{% endfor %}]"
 
 - name: install indexes
   shell: "{{item}} setup --template -E output.logstash.enabled=false -E output.elasticsearch.hosts=['{{elasticsearchAddress}}:9200']"  
@@ -54,7 +64,7 @@
     - metricbeat
     - packetbeat
     - filebeat
-    - heartbeat
+      #- heartbeat
 
 - name: install dashboards
   shell: "{{item}} setup -e -E output.logstash.enabled=false -E output.elasticsearch.hosts=['{{elasticsearchAddress}}:9200'] -E setup.kibana.host='{{kibanaAddress}}:5601'"
@@ -62,7 +72,7 @@
     - metricbeat
     - packetbeat
     - filebeat
-    - heartbeat
+      #- heartbeat
 
 - name: run beats
   systemd:
@@ -73,4 +83,4 @@
     - metricbeat
     - packetbeat
     - filebeat
-    - heartbeat-elastic 
+      #- heartbeat-elastic 

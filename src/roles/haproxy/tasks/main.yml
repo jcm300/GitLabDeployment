@@ -1,6 +1,7 @@
-- name: install dependencies packages
+- name: install haproxy
   apt:
     name: haproxy
+    state: present
 
 - name: haproxy config
   shell: "echo 'ENABLED=1' >> /etc/default/haproxy"
