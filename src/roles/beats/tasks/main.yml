@@ -33,7 +33,7 @@
     state: present
   loop:
     - metricbeat
-    - packetbeat
+      #- packetbeat
     - filebeat
       #- heartbeat-elastic
 
@@ -45,8 +45,8 @@
   loop:
     - ["metricbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
     - ["metricbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
-    - ["packetbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
-    - ["packetbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
+      #- ["packetbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
+      #- ["packetbeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
     - ["filebeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
     - ["filebeat",'#?output\.elasticsearch:[^\n]*\n[^\n]*\n  #?hosts:[^\n]*',"#output.elasticsearch:\n  #hosts: ['localhost:9200']"]
       #- ["heartbeat",'#?output\.logstash:[^\n]*\n[^\n]*\n  #hosts:[^\n]*',"output.logstash:\n  enabled: true\n  hosts: ['{{logstashAddress}}:5044']"]
@@ -62,7 +62,7 @@
   shell: "{{item}} setup --template -E output.logstash.enabled=false -E output.elasticsearch.hosts=['{{elasticsearchAddress}}:9200']"  
   loop:
     - metricbeat
-    - packetbeat
+      #- packetbeat
     - filebeat
       #- heartbeat
 
@@ -70,7 +70,7 @@
   shell: "{{item}} setup -e -E output.logstash.enabled=false -E output.elasticsearch.hosts=['{{elasticsearchAddress}}:9200'] -E setup.kibana.host='{{kibanaAddress}}:5601'"
   loop:
     - metricbeat
-    - packetbeat
+      #- packetbeat
     - filebeat
       #- heartbeat
 
@@ -81,6 +81,6 @@
     enabled: yes
   loop:
     - metricbeat
-    - packetbeat
+      #- packetbeat
     - filebeat
       #- heartbeat-elastic 

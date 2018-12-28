@@ -55,6 +55,21 @@
 - name: reconfigure gitlab
   shell: gitlab-ctl reconfigure
 
+  #- name: stop gitlab
+  #shell: gitlab-ctl stop
+
+  #- name: start gitaly
+  #shell: gitlab-ctl start gitaly
+
+  #- name: setup gitlab
+  #shell: DISABLE_DATABASE_ENVIRONMENT_CHECK=1 force=yes gitlab-rake gitlab:setup
+
+  #- name: restart gitlab
+  #shell: gitlab-ctl restart
+
+  #- name: reconfigure gitlab
+  #shell: gitlab-ctl reconfigure
+
 - name: fetch secrets
   fetch:
     src: /etc/gitlab/gitlab-secrets.json

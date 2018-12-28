@@ -4,4 +4,58 @@
     state: present
   loop:
     - openjdk-8-jdk
-    - jmeter
+    - wget
+
+- name: download jmeter
+  shell: "wget -c http://mirrors.up.pt/pub/apache//jmeter/binaries/apache-jmeter-5.0.tgz"
+
+- name: unpack jmeter
+  shell: "tar -xf apache-jmeter-5.0.tgz"
+
+- name: copy tests
+  template:
+    dest: "./{{item}}"
+    src: "{{item}}.j2"
+  loop:
+    - loginHAProxy.jmx
+    - loginaccessHAProxy.jmx
+    - loginGitLabApp.jmx
+    - loginaccessGitLabApp.jmx
+    - lHAProxy.jmx
+    - lGitLabApp.jmx
+
+      #- name: wait for user
+      #pause:
+      #prompt: "Login to Gitlab with username: 'root' and password: '{{rootGitlabPassword}}' and create a repository with name p1. When done press enter to run tests."
+
+    #- name: run tests
+    #shell: "apache-jmeter-5.0/bin/./jmeter -n -t ./{{item}}.jmx -l ./{{item}}.csv"
+    #loop:
+    #- loginHAProxy
+    #- loginaccessHAProxy
+    #- loginGitLabApp
+    #- loginaccessGitLabApp
+    #- lHAProxy
+    #- lGitLabApp
+
+      #- name: interpret results
+      #shell: "apache-jmeter-5.0/bin/./jmeter -g ./{{item}}.csv -o ./{{item}}"
+      #loop:
+      #- loginHAProxy
+      #- loginaccessHAProxy
+      #- loginGitLabApp
+      #- loginaccessGitLabApp
+      #- lHAProxy
+      #- lGitLabApp
+
+      #- name: fetch results
+      #fetch:
+      #src: "./{{item}}"
+      #dest: "~/"
+      #loop:
+      #- loginHAProxy
+      #- loginaccessHAProxy
+      #- loginGitLabApp
+      #- loginaccessGitLabApp
+      #- lHAProxy
+      #- lGitLabApp

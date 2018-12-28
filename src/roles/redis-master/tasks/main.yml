@@ -1,3 +1,22 @@
+- name: bug fix
+  pam_limits:
+    domain: '*'
+    limit_type: soft
+    limit_item: nofile
+    value: 65535
+
+- name: bug fix
+  pam_limits:
+    domain: '*'
+    limit_type: hard
+    limit_item: nofile
+    value: 65535
+
+- name: bug fix
+  lineinfile:
+    path: /etc/pam.d/common-session
+    line: "session required \tpam_limits.so"
+
 - name: install redis
   apt:
     name: redis-server

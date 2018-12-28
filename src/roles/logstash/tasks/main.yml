@@ -1,7 +1,3 @@
-- name: upgrade
-  apt:
-    upgrade: yes
-
 - name: Install packages
   apt:
     name: '{{item}}'
