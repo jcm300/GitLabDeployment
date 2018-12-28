@@ -1,0 +1,47 @@
+global
+    daemon
+    maxconn    30000
+    user    haproxy
+    group   haproxy
+    chroot  /var/lib/haproxy
+    log     /dev/log    local0
+    log     /dev/log    local1 notice
+    
+defaults
+    mode http
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+    
+frontend http-in
+    bind {{virtualAddress}}:80
+    default_backend http-servers
+    
+frontend ssh-in
+    mode tcp
+    bind {{virtualAddress}}:22
+    default_backend ssh-servers
+    
+backend ssh-servers
+    mode tcp
+    option allbackups
+    timeout server 2h
+    server instance-gitlab-06 {{firstGitlabAddress}}:22
+    server instance-gitlab-07 {{gitlabAddress}}:22 backup
+    
+backend http-servers
+    option allbackups
+    option forwardfor
+    balance roundrobin
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }
+    option httpchk HEAD / HTTP/1.1\r\nHost:localhost
+    server instance-gitlab-06 {{firstGitlabAddress}}:80 check maxconn 5000
+    server instance-gitlab-07 {{gitlabAddress}}:80 check maxconn 5000 backup
+    
+listen admin
+    bind {{virtualAddress}}:8080
+    stats enable
+    stats uri /
+    stats hide-version
+    stats auth {{username}}:{{password}}

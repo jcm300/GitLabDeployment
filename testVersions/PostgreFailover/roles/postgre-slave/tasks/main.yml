@@ -1,0 +1,65 @@
+- name: install necessary packages
+  apt:
+    name: '{{item}}'
+  loop:
+    - postgresql
+    - libpq-dev
+    - python-psycopg2
+    - postgresql-9.5-repmgr
+
+- name: Add pg_hba.conf line to permit access from network
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/9.5/main/pg_hba.conf"
+
+- name: Ensure service is enabled and started
+  service:
+    name: postgresql
+    state: restarted
+    enabled: yes
+
+- name: Update count
+  set_fact:
+    count: "{{1+(count|int)}}"
+
+- name: Add repmgr.conf for config
+  template:
+    src: repmgr.conf.j2
+    dest: "/etc/repmgr.conf" 
+
+- name: Add config to repmgrd
+  copy:
+    content: "REPMGRD_ENABLED=yes\nREPMGRD_CONF=\"/etc/repmgr.conf\"" 
+    dest: /etc/default/repmgrd
+
+- name: fix bug
+  file:
+    src: /usr/lib/postgresql/9.5/bin/pg_ctl
+    dest: /usr/bin/pg_ctl
+    state: link 
+
+- name: restart repmgrd
+  service:
+    name: repmgrd
+    state: restarted
+
+- name: Ensure service is stopped
+  service:
+    name: postgresql
+    state: stopped
+
+- name: Cleaning up old cluster directory
+  file:
+    path: /var/lib/postgresql/9.5/main
+    state: absent
+
+- name: clone db
+  shell: "repmgr -h {{groups['postgre-master'][0]}} -U gitlab -d repmgr -D /var/lib/postgresql/9.5/main standby clone"
+
+- name: change permissions
+  shell: "chown -R postgres:postgres /var/lib/postgresql"
+
+- name: Ensure service is started
+  service:
+    name: postgresql
+    state: started

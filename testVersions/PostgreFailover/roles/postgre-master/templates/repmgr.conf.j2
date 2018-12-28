@@ -1,0 +1,13 @@
+cluster=cluster
+node=1
+node_name=instance-gitlab-01
+{% for host in groups['postgre-slave'] %}
+conninfo='host={{ host }} user=gitlab dbname=repmgr connect_timeout=2'
+{% endfor %}
+failover=automatic
+promote_command='repmgr standby promote -f /etc/repmgr.conf --log-to-file'
+follow_command='repmgr standby follow -f /etc/repmgr.conf --log-to-file'
+logfile='/var/log/postgresql/repmgr.log'
+loglevel=NOTICE
+reconnect_attempts=4
+reconnect_interval=5

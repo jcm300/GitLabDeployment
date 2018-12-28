@@ -1,0 +1,16 @@
+- name: Add users
+  user:
+    name: "{{ username }}"
+    shell: "{{ shell | default(omit) }}"
+    password: "{{ password | password_hash('sha512') }}"
+
+- name: Add user to groups
+  user:
+    name: "{{ username }}"
+    groups: "{{ group }}"
+    append: yes
+
+- name: Set authorized keys
+  authorized_key:
+    user: "{{ username }}"
+    key: "{{ key }}"

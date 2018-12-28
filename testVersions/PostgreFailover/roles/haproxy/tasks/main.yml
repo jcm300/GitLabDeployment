@@ -1,0 +1,27 @@
+- name: install dependencies packages
+  apt:
+    name: haproxy
+
+- name: haproxy config
+  shell: "echo 'ENABLED=1' >> /etc/default/haproxy"
+
+- name: more haproxy config
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+
+- name: change sshd config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "#?\ ?Port[^\n]+"
+    line: "Port 22222"
+
+- name: stop sshd
+  service:
+    name: sshd
+    state: restarted
+
+- name: restart haproxy
+  service:
+    name: haproxy
+    state: restarted

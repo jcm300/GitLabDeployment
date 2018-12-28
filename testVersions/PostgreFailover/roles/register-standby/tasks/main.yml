@@ -1,0 +1,2 @@
+- name: register as standby
+  shell: "repmgr standby register"

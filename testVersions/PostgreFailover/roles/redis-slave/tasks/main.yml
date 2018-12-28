@@ -1,0 +1,36 @@
+- name: install redis
+  apt:
+    name: redis-server
+
+- name: config files
+  template:
+    src: '{{item[0]}}' 
+    dest: '{{item[1]}}'
+  loop:
+    - ["redis.conf.j2", "/etc/redis/redis.conf"]
+    - ["sentinel.conf.j2", "/etc/redis/sentinel.conf"]
+
+- name: config in sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: "vm.overcommit_memory = 1"
+
+- name: save changes in sysctl.conf
+  shell: sysctl -p
+
+- name: disable THP
+  shell: "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+
+- name: mantain disable THP in reboot
+  lineinfile:
+    path: /etc/rc.local
+    line: "echo never > /sys/kernel/mm/transparent_hugepage/enabled\necho never > /sys/kernel/mm/transparent_hugepage/defrag"
+
+- name: config to fix bug of tcp backlog setting of 511
+  shell: sysctl -w net.core.somaxconn=65535
+
+- name: restart redis
+  shell: "redis-cli shutdown"
+
+- name: start sentinel
+  shell: "redis-server /etc/redis/sentinel.conf --sentinel &"

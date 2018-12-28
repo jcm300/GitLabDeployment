@@ -1,0 +1,41 @@
+external_url 'http://{{groups['haproxy'][0]}}'
+
+high_availability['mountpoint'] = '/var/opt/gitlab/git-data'
+
+gitlab_rails['db_adapter'] = 'postgresql'
+
+gitlab_rails['db_encoding'] = 'unicode'
+gitlab_rails['db_database'] = 'gitlabhq_production'
+gitlab_rails['db_pool'] = 10
+gitlab_rails['db_username'] = 'gitlab'
+gitlab_rails['db_password'] = '{{postgrePassword}}'
+gitlab_rails['db_host'] = '{{groups['postgre-master'][0]}}{% for host in groups['postgre-slave'] %} , {{ host }}{% endfor %}'
+gitlab_rails['db_port'] = 5432
+
+redis['master_name'] = 'instance-gitlab-03'
+gitlab_rails['redis_port'] = 6379
+redis['master_password'] = '{{redisPassword}}'
+gitlab_rails['redis_sentinels'] = [
+{% for host in groups['redis-master'] %}
+    {'host' => '{{ host }}', 'port' => 26379},
+{% endfor %}
+{% for host in groups['redis-slave'] %}
+{% if loop.last %}
+    {'host' => '{{ host }}', 'port' => 26379}
+{% else %}
+    {'host' => '{{ host }}', 'port' => 26379},
+{% endif %}
+{% endfor %}
+]
+
+postgresql['enable'] = false
+redis['enable'] = false
+nginx['enable'] = true
+nginx['redirect_http_to_https'] = true
+
+user['uid'] = 9000
+user['gid'] = 9000
+web_server['uid'] = 9001
+web_server['gid'] = 9001
+registry['uid'] = 9002
+registry['gid'] = 9002

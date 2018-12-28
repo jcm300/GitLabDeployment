@@ -1,0 +1,17 @@
+- name: install redis
+  apt:
+    name: redis-server
+
+- name: config files
+  copy:
+    content: '{{item[0]}}' 
+    dest: '{{item[1]}}'
+  loop:
+    - ["bind 0.0.0.0\nport 6379\nrequirepass \"{{password}}\"\nmasterauth \"{{password}}\"", "/etc/redis/redis.conf"]
+    - ["bind 0.0.0.0\nport 26379\nsentinel monitor instance-gitlab-02 {{redisMasterAddress}} 6379 2\nsentinel auth-pass instance-gitlab-02 \"{{password}}\"\nsentinel down-after-milliseconds instance-gitlab-02 10000\nsentinel failover-timeout instance-gitlab-02 30000", "/etc/redis/sentinel.conf"]
+
+- name: restart redis
+  shell: "redis-cli shutdown"
+
+- name: start sentinel
+  shell: "redis-server /etc/redis/sentinel.conf --sentinel &"

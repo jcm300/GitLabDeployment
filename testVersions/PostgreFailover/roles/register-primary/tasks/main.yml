@@ -1,0 +1,2 @@
+- name: register master node
+  shell: "repmgr primary register"
